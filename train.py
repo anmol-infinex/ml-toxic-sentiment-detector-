@@ -17,7 +17,7 @@ def load_data(file_path=TRAIN_FILE):
     df = df.drop_duplicates(subset=[TEXT_COLUMN, LABEL_COLUMN])
     if df[LABEL_COLUMN].nunique() < 2:
         raise ValueError("Training needs at least two label classes.")
-    return df[TEXT_COLUMN], df[LABEL_COLUMN]
+    return df[TEXT_COLUMN].tolist(), df[LABEL_COLUMN]
 
 
 def create_model():
@@ -41,8 +41,8 @@ def preprocess_texts(texts):
 
 
 def train(show_test_output=False):
-    X, y = load_data()
-    X = preprocess_texts(X.tolist())
+    raw_x, y = load_data()
+    X = preprocess_texts(raw_x)
     from sklearn.model_selection import train_test_split
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=y)
     model = create_model()
