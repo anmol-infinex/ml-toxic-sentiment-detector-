@@ -4,6 +4,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import FeatureUnion, Pipeline
 from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
 from config import TRAIN_FILE, MODEL_DIR, MODEL_FILE, TEXT_COLUMN, LABEL_COLUMN, TEST_SIZE, RANDOM_STATE
 from preprocess import normalize_for_model
 
@@ -43,11 +44,13 @@ def preprocess_texts(texts):
 def train(show_test_output=False):
     raw_x, y = load_data()
     X = preprocess_texts(raw_x)
-    from sklearn.model_selection import train_test_split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=y)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=y
+    )
     model = create_model()
     model.fit(X_train, y_train)
-    print(f"Holdout accuracy: {accuracy_score(y_test, model.predict(X_test)):.4f}")
+    holdout = accuracy_score(y_test, model.predict(X_test))
+    print(f"Holdout accuracy: {holdout:.4f}")
     model.fit(X, y)
     MODEL_DIR.mkdir(exist_ok=True)
     joblib.dump(model, MODEL_FILE)
