@@ -25,43 +25,22 @@ def load_data(file_path=TRAIN_FILE):
 
 def create_model():
     features = FeatureUnion([
-        (
-            "word_tfidf",
-            TfidfVectorizer(
-                analyzer="word",
-                preprocessor=normalize_for_model,
-                token_pattern=r"(?u)\b\w+\b",
-                lowercase=False,
-                ngram_range=(1, 4),
-                min_df=1,
-                max_df=1.0,
-                max_features=20000,
-                sublinear_tf=True,
-            ),
-        ),
-        (
-            "char_tfidf",
-            TfidfVectorizer(
-                analyzer="char_wb",
-                preprocessor=normalize_for_model,
-                lowercase=False,
-                ngram_range=(3, 6),
-                min_df=1,
-                max_features=30000,
-                sublinear_tf=True,
-            ),
-        ),
+        ("word_tfidf", TfidfVectorizer(
+            analyzer="word", preprocessor=normalize_for_model,
+            token_pattern=r"(?u)\b\w+\b", lowercase=False,
+            ngram_range=(1, 4), min_df=1, max_df=1.0,
+            max_features=20000, sublinear_tf=True)),
+        ("char_tfidf", TfidfVectorizer(
+            analyzer="char_wb", preprocessor=normalize_for_model,
+            lowercase=False, ngram_range=(3, 6), min_df=1,
+            max_features=30000, sublinear_tf=True)),
     ], transformer_weights={"word_tfidf": 1.0, "char_tfidf": 0.6})
 
     return Pipeline([
         ("features", features),
         ("classifier", LogisticRegression(
-            max_iter=2000,
-            class_weight="balanced",
-            solver="liblinear",
-            random_state=RANDOM_STATE,
-            C=1.0,
-        )),
+            max_iter=2000, class_weight="balanced", solver="liblinear",
+            random_state=RANDOM_STATE, C=1.0)),
     ])
 
 
@@ -91,14 +70,3 @@ def predict(texts, model_path=MODEL_FILE, model=None):
     if model is None:
         model = load_model(model_path)
     return model.predict(texts)
-
-
-def predict_with_confidence(text, model_path=MODEL_FILE, model=None):
-    if model is None:
-        model = load_model(model_path)
-    probabilities = model.predict_proba([text])[0]
-    probability_by_label = dict(zip(model.classes_, probabilities))
-    label = max(probability_by_label, key=probability_by_label.get)
-    return label, round(float(probability_by_label[label]), 4), {
-        key: round(float(value), 4) for key, value in probability_by_label.items()
-    }
