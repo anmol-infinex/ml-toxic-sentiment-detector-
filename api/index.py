@@ -16,8 +16,8 @@ app = FastAPI(title="ML Toxic Sentiment Detector API")
 MODEL = None
 MODEL_LOAD_ERROR = None
 try:
-    if not MODEL_FILE.exists():
-        MODEL_LOAD_ERROR = f"Model file not found: {MODEL_FILE}"
+    if not MODEL_FILE.exists() or MODEL_FILE.stat().st_size == 0:
+        MODEL_LOAD_ERROR = f"Model file missing or empty: {MODEL_FILE}"
     else:
         MODEL = joblib.load(MODEL_FILE)
 except Exception as exc:
@@ -29,16 +29,16 @@ class PredictionRequest(BaseModel):
 @app.get("/")
 def root():
     return {
-        "service":"ML Toxic Sentiment Detector",
-        "status":"healthy" if MODEL is not None else "model_unavailable",
-        "message":"POST text to /predict" if MODEL is not None else MODEL_LOAD_ERROR,
+        "service": "ML Toxic Sentiment Detector",
+        "status": "healthy" if MODEL is not None else "model_unavailable",
+        "message": "POST {text: string} to /predict" if MODEL is not None else MODEL_LOAD_ERROR,
     }
 
 @app.get("/health")
 def health():
     if MODEL is None:
-        return {"status":"error","error":MODEL_LOAD_ERROR}
-    return {"status":"healthy","model":MODEL_FILE.name}
+        raise HTTPException(status_code=503, detail=MODEL_LOAD_ERROR)
+    return {"status": "healthy", "model": MODEL_FILE.name, "model_size_bytes": MODEL_FILE.stat().st_size}
 
 @app.post("/predict")
 def predict(request: PredictionRequest):
@@ -49,10 +49,10 @@ def predict(request: PredictionRequest):
         raise HTTPException(status_code=400, detail="Please enter some text.")
     result = classify_sentence(text, model=MODEL)
     return {
-        "text":text,
-        "prediction":result["label"],
-        "confidence":result["confidence"],
-        "model_probability":result.get("model_probability",{}),
-        "bad_terms":result.get("bad_terms",[]),
-        "source":result.get("source","ml_plus_rules"),
+        "text": text,
+        "prediction": result["label"],
+        "confidence": result["confidence"],
+        "model_probability": result.get("model_probability", {}),
+        "bad_terms": result.get("bad_terms", []),
+        "source": result.get("source", "ml_plus_rules"),
     }
