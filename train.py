@@ -1,26 +1,37 @@
-import pandas as pd
+import csv
+from pathlib import Path
+
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import FeatureUnion, Pipeline
-from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
 from config import TRAIN_FILE, LABEL_COLUMN, TEXT_COLUMN, TEST_SIZE, RANDOM_STATE
 from preprocess import normalize_for_model
 
 
 def load_data(file_path=TRAIN_FILE):
-    df = pd.read_csv(file_path)
-    df = df.dropna(subset=[TEXT_COLUMN, LABEL_COLUMN]).copy()
-    df[TEXT_COLUMN] = df[TEXT_COLUMN].astype(str).str.strip()
-    df[LABEL_COLUMN] = (
-        df[LABEL_COLUMN].astype(str).str.strip().str.lower()
-        .replace({"mad": "bad", "negative": "bad", "positive": "good"})
-    )
-    df = df[df[TEXT_COLUMN] != ""]
-    df = df.drop_duplicates(subset=[TEXT_COLUMN, LABEL_COLUMN])
-    if df[LABEL_COLUMN].nunique() < 2:
+    rows = []
+    with Path(file_path).open("r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        if not reader.fieldnames or TEXT_COLUMN not in reader.fieldnames or LABEL_COLUMN not in reader.fieldnames:
+            raise ValueError(f"CSV must contain '{TEXT_COLUMN}' and '{LABEL_COLUMN}' columns.")
+        for row in reader:
+            text = str(row.get(TEXT_COLUMN, "") or "").strip()
+            label = str(row.get(LABEL_COLUMN, "") or "").strip().lower()
+            label = {"mad": "bad", "negative": "bad", "positive": "good"}.get(label, label)
+            if text and label in {"bad", "good"}:
+                rows.append((text, label))
+
+    dedup = {}
+    for text, label in rows:
+        dedup[(text, label)] = (text, label)
+    rows = list(dedup.values())
+    labels = [label for _, label in rows]
+    if len(set(labels)) < 2:
         raise ValueError("Training needs at least two label classes.")
-    return df[TEXT_COLUMN].tolist(), df[LABEL_COLUMN]
+    return [text for text, _ in rows], labels
 
 
 def create_model():
@@ -33,7 +44,7 @@ def create_model():
             ngram_range=(1, 4),
             min_df=1,
             max_df=1.0,
-            max_features=20000,
+            max_features=12000,
             sublinear_tf=True,
         )),
         ("char_tfidf", TfidfVectorizer(
@@ -42,7 +53,7 @@ def create_model():
             lowercase=False,
             ngram_range=(3, 6),
             min_df=1,
-            max_features=30000,
+            max_features=16000,
             sublinear_tf=True,
         )),
     ], transformer_weights={"word_tfidf": 1.0, "char_tfidf": 0.6})
@@ -50,7 +61,7 @@ def create_model():
     return Pipeline([
         ("features", features),
         ("classifier", LogisticRegression(
-            max_iter=2000,
+            max_iter=1500,
             class_weight="balanced",
             solver="liblinear",
             random_state=RANDOM_STATE,
@@ -65,13 +76,18 @@ def preprocess_texts(texts):
 
 def train(show_test_output=False):
     raw_x, y = load_data()
-    X_train, X_test, y_train, y_test = train_test_split(
-        raw_x, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=y
-    )
-    model = create_model()
-    model.fit(X_train, y_train)
-    holdout = accuracy_score(y_test, model.predict(X_test))
-    print(f"Holdout accuracy: {holdout:.4f}")
+    if len(raw_x) >= 10 and len(set(y)) >= 2:
+        X_train, X_test, y_train, y_test = train_test_split(
+            raw_x, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=y
+        )
+        model = create_model()
+        model.fit(X_train, y_train)
+        if show_test_output:
+            print(f"Holdout accuracy: {accuracy_score(y_test, model.predict(X_test)):.4f}")
+    else:
+        model = create_model()
+
+    model.fit(raw_x, y)
     return model
 
 
