@@ -19,7 +19,6 @@ try:
     MODEL = create_model()
     MODEL.fit(raw_x, y)
 except Exception as exc:
-    # Keep the API importable so / can expose the real initialization error.
     MODEL_LOAD_ERROR = f"Model initialization failed: {type(exc).__name__}: {exc}"
 
 
@@ -39,17 +38,15 @@ def root():
 
 @app.get("/health")
 def health():
-    return {
-        "status": "healthy" if MODEL is not None else "model_error",
-        "model": "in-memory classifier" if MODEL is not None else None,
-        "error": MODEL_LOAD_ERROR,
-    }
+    if MODEL is None:
+        raise HTTPException(status_code=503, detail=MODEL_LOAD_ERROR or "Model initialization failed.")
+    return {"status": "healthy", "model": "in-memory classifier"}
 
 
 @app.post("/predict")
 def predict(request: PredictionRequest):
     if MODEL is None:
-        raise HTTPException(status_code=503, detail=MODEL_LOAD_ERROR or "Model is unavailable.")
+        raise HTTPException(status_code=503, detail=MODEL_LOAD_ERROR or "Model unavailable.")
     text = request.text.strip()
     if not text:
         raise HTTPException(status_code=400, detail="Please enter some text.")
