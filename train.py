@@ -23,29 +23,48 @@ def load_data(file_path=TRAIN_FILE):
     return df[TEXT_COLUMN], df[LABEL_COLUMN]
 
 
-def create_model():
-    features = FeatureUnion([
-        ("word_tfidf", TfidfVectorizer(
-            analyzer="word", preprocessor=normalize_for_model,
-            token_pattern=r"(?u)\b\w+\b", lowercase=False,
-            ngram_range=(1, 4), min_df=1, max_df=1.0,
-            max_features=20000, sublinear_tf=True)),
-        ("char_tfidf", TfidfVectorizer(
-            analyzer="char_wb", preprocessor=normalize_for_model,
-            lowercase=False, ngram_range=(3, 6), min_df=1,
-            max_features=30000, sublinear_tf=True)),
-    ], transformer_weights={"word_tfidf": 1.0, "char_tfidf": 0.6})
+def model_texts(texts):
+    return [normalize_for_model(x) for x in texts]
 
+
+def create_model():
+    word = TfidfVectorizer(
+        analyzer="word",
+        token_pattern=r"(?u)\b\w+\b",
+        lowercase=False,
+        ngram_range=(1, 4),
+        min_df=1,
+        max_df=1.0,
+        max_features=20000,
+        sublinear_tf=True,
+    )
+    char = TfidfVectorizer(
+        analyzer="char_wb",
+        lowercase=False,
+        ngram_range=(3, 6),
+        min_df=1,
+        max_features=30000,
+        sublinear_tf=True,
+    )
+    features = FeatureUnion(
+        [("word_tfidf", word), ("char_tfidf", char)],
+        transformer_weights={"word_tfidf": 1.0, "char_tfidf": 0.6},
+    )
     return Pipeline([
         ("features", features),
         ("classifier", LogisticRegression(
-            max_iter=2000, class_weight="balanced", solver="liblinear",
-            random_state=RANDOM_STATE, C=1.0)),
+            max_iter=2000,
+            class_weight="balanced",
+            solver="liblinear",
+            random_state=RANDOM_STATE,
+            C=1.0,
+        )),
     ])
 
 
 def train(show_test_output=False):
     X, y = load_data()
+    X = model_texts(X.tolist())
     from sklearn.model_selection import train_test_split
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=y
@@ -69,4 +88,4 @@ def predict(texts, model_path=MODEL_FILE, model=None):
         texts = [texts]
     if model is None:
         model = load_model(model_path)
-    return model.predict(texts)
+    return model.predict(model_texts(texts))
