@@ -4,6 +4,7 @@ TOKEN_PATTERN = re.compile(r"[a-z0-9']+")
 URL_PATTERN = re.compile(r"https?://\S+|www\.\S+")
 REPEATED_CHAR_PATTERN = re.compile(r"(.)\1{2,}")
 REPEATED_PUNCT_PATTERN = re.compile(r"([!?.]){2,}")
+NEGATION_WORDS = {"not", "no", "never", "dont", "don't", "cannot", "can't", "wont", "won't"}
 CONTRAST_WORDS = {"but", "however", "though", "although", "yet"}
 
 CONTRACTIONS = {
@@ -12,6 +13,7 @@ CONTRACTIONS = {
     "isn't": "is not", "aren't": "are not", "wasn't": "was not",
     "weren't": "were not", "u": "you", "ur": "your",
 }
+
 SPELLING_FIXES = {
     "looser": "loser", "loozer": "loser", "luser": "loser",
     "stuped": "stupid", "stupiddd": "stupid", "kil": "kill",
@@ -22,7 +24,7 @@ SPELLING_FIXES = {
 
 def clean_text(text):
     text = str(text).lower()
-    text = URL_PATTERN.sub(" URL ", text)
+    text = URL_PATTERN.sub(" url ", text)
     text = text.replace("&", " and ")
     text = REPEATED_PUNCT_PATTERN.sub(r"\1", text)
     text = re.sub(r"[^\w\s'!?.,]", " ", text)
@@ -38,13 +40,14 @@ def tokenize(text):
 
 
 def normalize_tokens(text):
-    out = []
-    for token in tokenize(text):
+    raw_tokens = tokenize(text)
+    normalized = []
+    for token in raw_tokens:
         token = reduce_repeated_letters(token)
         replacement = CONTRACTIONS.get(token, token)
         for part in replacement.split():
-            out.append(SPELLING_FIXES.get(part, part))
-    return out
+            normalized.append(SPELLING_FIXES.get(part, part))
+    return normalized
 
 
 def normalize_text(text):
@@ -53,35 +56,43 @@ def normalize_text(text):
 
 def extract_after_contrast(text):
     tokens = normalize_tokens(text)
-    last = -1
+    last_index = -1
     for i, token in enumerate(tokens):
         if token in CONTRAST_WORDS:
-            last = i
-    return " ".join(tokens[last + 1:]) if last >= 0 and last < len(tokens) - 1 else None
+            last_index = i
+    if last_index >= 0 and last_index < len(tokens) - 1:
+        return " ".join(tokens[last_index + 1:])
+    return None
 
 
 def normalize_for_model(text):
+    """Return non-empty normalized text suitable for TF-IDF."""
     tokens = normalize_tokens(text)
     output = []
-    negate = 0
-    after = False
+    negate_next = 0
+    after_contrast = False
+
     for token in tokens:
         output.append(token)
-        if after:
+        if after_contrast:
             output.append(f"AFTER_CONTRAST_{token}")
         if token in CONTRAST_WORDS:
-            after = True
-            negate = 0
+            after_contrast = True
+            negate_next = 0
             continue
         if token in {"not", "no", "never"}:
-            negate = 4
+            negate_next = 4
             continue
-        if negate > 0:
+        if negate_next > 0:
             output.append(f"NOT_{token}")
-            if after:
+            if after_contrast:
                 output.append(f"AFTER_CONTRAST_NOT_{token}")
-            negate -= 1
-    after_text = extract_after_contrast(text)
-    if after_text:
-        output.append(f"CONTRAST_FOCUS_{after_text.replace(' ', '_')}")
-    return " ".join(output) or "emptytoken"
+            negate_next -= 1
+
+    after = extract_after_contrast(text)
+    if after:
+        output.append(f"CONTRAST_FOCUS_{after.replace(' ', '_')}")
+
+    result = " ".join(output).strip()
+    # Never return an empty document. This is critical for TF-IDF fitting.
+    return result if result else "emptyinput"
