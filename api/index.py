@@ -15,33 +15,41 @@ MODEL = None
 MODEL_LOAD_ERROR = None
 
 try:
-    # Train once when the serverless instance initializes.
-    # The model is kept in memory for subsequent requests in the same instance.
     raw_x, y = load_data()
     MODEL = create_model()
     MODEL.fit(raw_x, y)
 except Exception as exc:
+    # Keep the API importable so / can expose the real initialization error.
     MODEL_LOAD_ERROR = f"Model initialization failed: {type(exc).__name__}: {exc}"
+
 
 class PredictionRequest(BaseModel):
     text: str
 
+
 @app.get("/")
 def root():
-    if MODEL is None:
-        return {"service":"ML Toxic Sentiment Detector","status":"model_error","error":MODEL_LOAD_ERROR}
-    return {"service":"ML Toxic Sentiment Detector","status":"healthy","message":"POST {text: string} to /predict"}
+    return {
+        "service": "ML Toxic Sentiment Detector",
+        "status": "healthy" if MODEL is not None else "model_error",
+        "error": MODEL_LOAD_ERROR,
+        "message": "POST JSON {\"text\":\"...\"} to /predict",
+    }
+
 
 @app.get("/health")
 def health():
-    if MODEL is None:
-        raise HTTPException(status_code=503, detail=MODEL_LOAD_ERROR)
-    return {"status":"healthy","model":"in-memory classifier"}
+    return {
+        "status": "healthy" if MODEL is not None else "model_error",
+        "model": "in-memory classifier" if MODEL is not None else None,
+        "error": MODEL_LOAD_ERROR,
+    }
+
 
 @app.post("/predict")
 def predict(request: PredictionRequest):
     if MODEL is None:
-        raise HTTPException(status_code=503, detail=MODEL_LOAD_ERROR)
+        raise HTTPException(status_code=503, detail=MODEL_LOAD_ERROR or "Model is unavailable.")
     text = request.text.strip()
     if not text:
         raise HTTPException(status_code=400, detail="Please enter some text.")
