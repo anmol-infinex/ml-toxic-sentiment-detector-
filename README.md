@@ -1,126 +1,50 @@
 # 🧠 ML Toxic Sentiment Detector
 
+> A lightweight NLP security project that classifies text as **Good** or **Bad** using TF-IDF, Logistic Regression, and rule-based signals.
+
 ## 📌 Overview
-This project is a machine learning-based system that classifies user input as:
 
-- ✅ **Good**
-- ❌ **Bad**
+This project is an end-to-end machine learning system for detecting harmful, abusive, or negative language in text. It combines a traditional ML pipeline with rule-based enhancements to make predictions more practical for real-world inputs.
 
-It is designed to detect harmful, abusive, or negative language in real-time using a hybrid approach combining machine learning and rule-based logic.
+### What it demonstrates
+- 🧠 Natural Language Processing with **TF-IDF**
+- 📈 Text classification with **Logistic Regression**
+- 🛡️ Rule-based detection for security-related phrases
+- ⚡ Fast, lightweight prediction suitable for real-time use
+- 📊 Confidence scores and detected signals
+- 🧩 Handling of negation, contrast, and selected edge cases
 
----
+## ⚙️ How It Works
 
-## ⚙️ Features
+**Input → Preprocessing → TF-IDF → Logistic Regression → Rule-Based Refinement → Final Prediction**
 
-- 🔍 Detects toxic or negative sentences
-- ⚡ Real-time prediction (fast & lightweight)
-- 🧠 Hybrid system:
-  - TF-IDF (Text Vectorization)
-  - Logistic Regression (ML Model)
-  - Rule-based enhancements
-- 🧩 Handles complex NLP cases:
-  - Negation → "not bad"
-  - Contrast → "good but slow"
-  - Sarcasm → "great job ruining everything"
-- 📊 Confidence score for predictions
-- 🛡️ Detects system-related threats (cybersecurity use-case)
-
----
+The final result includes a **good/bad label**, confidence score, and relevant detected words or phrases.
 
 ## 🏗️ Tech Stack
 
-- Python
-- Scikit-learn
-- Pandas
-- NumPy
-- Joblib
+Python · Scikit-learn · Pandas · NumPy · Joblib
 
----
+## 🚀 Applications
 
-## 📁 Project Structure
+Content moderation · Social media filtering · Customer feedback analysis · AI safety · Cybersecurity text screening
 
-ML/
-├── train.py # Train ML model
-├── detector.py # Core classification logic
-├── predict.py # User input interface (CLI)
-├── preprocess.py # Text preprocessing
-├── vocabulary.py # Rule-based signals
-├── config.py # Configurations
-├── train.csv # Dataset
-├── models/
-│ └── sentiment_model.joblib
-└── README.md
+## ▶️ Quick Start
 
-## 🚀 How It Works
-
-1. User enters a sentence
-2. Text is preprocessed
-3. TF-IDF converts text into numerical features
-4. Logistic Regression predicts probabilities
-5. Rule-based system refines the prediction
-6. Final output includes:
-   - Label (**good / bad**)
-   - Confidence score
-   - Detected bad words or phrases
-
----
-
-## ▶️ How to Run
-
-### 1. Clone the repository
-
-bash
-
-git clone https://github.com/your-username/ml-toxic-sentiment-detector.git
-
-cd ml-toxic-sentiment-detector
-
+```bash
+git clone https://github.com/anmol-infinex/ml-toxic-sentiment-detector-.git
+cd ml-toxic-sentiment-detector-
 pip install -r requirements.txt
-
 python train.py
-
 python predict.py
+```
 
----------------------------------------
+## 📊 Model Performance
 
-💡 Example
-Enter a sentence: i will destroy your system
-
-Prediction: bad
-Confidence: 0.94
-Bad word/phrase found: destroy
-
---------------------------------------
-
-🎯 Applications
-
-
-💬 Chat moderation systems
-🌐 Social media content filtering
-📝 Customer feedback analysis
-🔐 Cybersecurity threat detection
-🤖 AI assistants content safety
-
-------------------------------------
-
-📊 Model Performance
-Training Accuracy: ~99%
-Real-world accuracy: ~80–90%
-Handles edge cases better than basic ML models
-
---------------------------------------
-
-🧠 Key Learnings
-Built an end-to-end ML pipeline
-Combined ML + rule-based logic
-Improved model using real-world test cases
-Handled edge cases like sarcasm, negation, and contrast
-Designed system for practical applications
+The training pipeline reports model accuracy and classification metrics after training. Current project documentation reports approximately **99% training accuracy** and **80–90% real-world accuracy**, with edge-case handling as an additional focus.
 
 ## 👨‍💻 Author
 
-**Anmol Rathod**  
-BSc IT (Cyber Security + AI/ML)
+**Anmol Rathod** · BSc IT (Cyber Security + AI/ML)
 
-🔗 [LinkedIn Profile](https://www.linkedin.com/in/anmol-rathod-aabb13360)  
+🔗 [LinkedIn](https://www.linkedin.com/in/anmol-rathod-aabb13360)  
 📫 Open to internships and collaboration opportunities
